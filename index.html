@@ -1,25 +1,234 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>План безпеки</title>
-
-<!-- PWA -->
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#2f80ed">
+<title>Inventory</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-body{font-family:Arial,sans-serif;background:#f2f4f7;padding:15px;color:#333;}
-h1{text-align:center;margin-bottom:15px;}
-section{background:#fff;padding:15px;margin-bottom:20px;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,0.1);}
-table{width:100%;border-collapse:collapse;}
-th,td{border:1px solid #ccc;padding:6px;vertical-align:middle;}
-th{background:#eee;text-align:left;}
-.have{background:#d4edda;}
-.controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px;justify-content:center;}
-button,select,input[type=number],input[type=text]{padding:6px;border-radius:4px;border:1px solid #ccc;}
-input[type=text]{width:90%;box-sizing:border-box;}
-input[type=number]{width:60px;}
-td.flex-cell{display:flex;align-items:center;gap:5px;}
-td.flex-cell input[type=checkbox]{width:auto
+body { font-family: Arial; background:#f4f6f8; padding:10px; }
+.container { max-width:1200px; margin:auto; background:#fff; padding:15px; border-radius:8px; }
+input, select, button { padding:8px; margin:4px; }
+table { width:100%; border-collapse:collapse; margin-top:10px; }
+th,td { border:1px solid #ccc; padding:6px; text-align:center; }
+th { background:#e9ecef; }
+.hidden { display:none; }
+button { cursor:pointer; }
+</style>
+</head>
+
+<body>
+<h1>Inventory</h1>
+
+<div class="container">
+
+<!-- ADD -->
+<input id="name" placeholder="Name">
+<select id="category">
+<option>Equipment</option><option>Dry Food</option><option>Electrical</option>
+<option>Medical</option><option>Tools</option><option>Other</option>
+</select>
+<input type="date" id="expiry">
+<input type="number" id="price" placeholder="Unit price">
+<input type="number" id="qty" placeholder="Qty">
+<button id="addBtn">Add</button>
+
+<hr>
+
+<label><input type="checkbox" id="groupToggle"> Group identical</label>
+
+<select id="sortBy">
+<option value="added">Sort: Added</option>
+<option value="expiry">Sort: Expiry</option>
+<option value="category">Sort: Category</option>
+</select>
+
+<button id="toggleArchive">Archive</button>
+
+<h3>Total cost: <span id="totalCost">0</span></h3>
+
+<table>
+<thead>
+<tr>
+<th>Name</th><th>Category</th><th>Qty</th><th>Expiry</th>
+<th>Price</th><th>Total</th><th>Actions</th>
+</tr>
+</thead>
+<tbody id="inventoryList"></tbody>
+</table>
+
+<div id="archiveSection" class="hidden">
+<h2>Archive</h2>
+<table>
+<thead>
+<tr><th>Name</th><th>Category</th><th>Qty</th><th>Actions</th></tr>
+</thead>
+<tbody id="archiveList"></tbody>
+</table>
+</div>
+
+</div>
+
+<script>
+/* ===== DATA ===== */
+let inventory = JSON.parse(localStorage.getItem("inventory")) || [];
+let archive = JSON.parse(localStorage.getItem("archive")) || [];
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+/* ===== STORAGE ===== */
+function save() {
+  localStorage.setItem("inventory", JSON.stringify(inventory));
+  localStorage.setItem("archive", JSON.stringify(archive));
+  render();
+}
+
+/* ===== ADD ===== */
+document.getElementById("addBtn").onclick = () => {
+  let q = +qty.value || 0;
+  for (let i=0;i<q;i++) {
+    inventory.push({
+      id: uid(),
+      name: name.value,
+      category: category.value,
+      expiry: expiry.value || "",
+      price: +price.value || 0,
+      added: Date.now()
+    });
+  }
+  save();
+};
+
+/* ===== GROUPING ===== */
+function buildGroups(list) {
+  let map = {};
+  list.forEach(i=>{
+    let k = i.name + "|" + i.category;
+    if (!map[k]) map[k] = {
+      groupId: k,
+      name: i.name,
+      category: i.category,
+      items: []
+    };
+    map[k].items.push(i);
+  });
+  return Object.values(map);
+}
+
+function minExpiry(items) {
+  return items.map(i=>i.expiry).filter(Boolean).sort()[0] || "-";
+}
+
+/* ===== SORT ===== */
+function sortGroups(groups) {
+  let m = sortBy.value;
+  if (m==="category")
+    groups.sort((a,b)=>a.category.localeCompare(b.category));
+  if (m==="expiry")
+    groups.sort((a,b)=>minExpiry(a.items).localeCompare(minExpiry(b.items)));
+  if (m==="added")
+    groups.sort((a,b)=>
+      Math.min(...a.items.map(i=>i.added)) -
+      Math.min(...b.items.map(i=>i.added))
+    );
+}
+
+/* ===== ACTIONS ===== */
+document.body.addEventListener("click", e=>{
+  let btn = e.target.closest("button[data-action]");
+  if (!btn) return;
+
+  let groupId = btn.dataset.group;
+  let src = btn.dataset.src;
+  let list = src==="inventory" ? inventory : archive;
+  let groups = buildGroups(list);
+  let group = groups.find(g=>g.groupId===groupId);
+  if (!group) return;
+
+  if (btn.dataset.action==="remove-one") {
+    let target = [...group.items]
+      .sort((a,b)=>(a.expiry||"9999").localeCompare(b.expiry||"9999"))[0];
+    list.splice(list.findIndex(i=>i.id===target.id),1);
+  }
+
+  if (btn.dataset.action==="remove-all") {
+    if (!confirm("Are you sure?")) return;
+    let ids = group.items.map(i=>i.id);
+    for (let i=list.length-1;i>=0;i--)
+      if (ids.includes(list[i].id)) list.splice(i,1);
+  }
+
+  if (btn.dataset.action==="archive") {
+    group.items.forEach(i=>archive.push(i));
+    let ids = group.items.map(i=>i.id);
+    inventory = inventory.filter(i=>!ids.includes(i.id));
+  }
+
+  if (btn.dataset.action==="restore") {
+    group.items.forEach(i=>inventory.push(i));
+    let ids = group.items.map(i=>i.id);
+    archive = archive.filter(i=>!ids.includes(i.id));
+  }
+
+  save();
+});
+
+/* ===== UI ===== */
+document.getElementById("toggleArchive").onclick = () =>
+  archiveSection.classList.toggle("hidden");
+
+document.getElementById("groupToggle").onchange = render;
+document.getElementById("sortBy").onchange = render;
+
+/* ===== RENDER ===== */
+function render() {
+  inventoryList.innerHTML = "";
+  archiveList.innerHTML = "";
+  let total = 0;
+
+  let groups = buildGroups(inventory);
+  sortGroups(groups);
+
+  groups.forEach(g=>{
+    let sum = g.items.reduce((s,i)=>s+i.price,0);
+    total += sum;
+
+    inventoryList.innerHTML += `
+    <tr>
+    <td>${g.name}</td>
+    <td>${g.category}</td>
+    <td>${g.items.length}</td>
+    <td>${minExpiry(g.items)}</td>
+    <td>${g.items[0].price}</td>
+    <td>${sum.toFixed(2)}</td>
+    <td>
+      <button data-action="remove-one" data-group="${g.groupId}" data-src="inventory">-1</button>
+      <button data-action="remove-all" data-group="${g.groupId}" data-src="inventory">Delete</button>
+      <button data-action="archive" data-group="${g.groupId}" data-src="inventory">Archive</button>
+    </td>
+    </tr>`;
+  });
+
+  buildGroups(archive).forEach(g=>{
+    archiveList.innerHTML += `
+    <tr>
+    <td>${g.name}</td>
+    <td>${g.category}</td>
+    <td>${g.items.length}</td>
+    <td>
+      <button data-action="remove-one" data-group="${g.groupId}" data-src="archive">-1</button>
+      <button data-action="remove-all" data-group="${g.groupId}" data-src="archive">Delete</button>
+      <button data-action="restore" data-group="${g.groupId}" data-src="archive">Restore</button>
+    </td>
+    </tr>`;
+  });
+
+  totalCost.innerText = total.toFixed(2);
+}
+
+render();
+</script>
+</body>
+</html>
