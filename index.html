@@ -9,46 +9,48 @@
 <meta name="theme-color" content="#2f80ed">
 
 <style>
-body {
-  margin: 0;
-  padding: 10px;
-  font-family: Arial, sans-serif;
-  background: #f2f4f7;
+body{
+  font-family:Arial,sans-serif;
+  background:#f2f4f7;
+  margin:0;
+  padding:10px;
+}
+h1{text-align:center}
+
+.tabs{
+  display:flex;
+  gap:5px;
+  margin-bottom:10px;
+}
+.tabs button{
+  flex:1;
+  padding:10px;
+  border:none;
+  background:#ddd;
+  font-size:16px;
+}
+.tabs button.active{
+  background:#2f80ed;
+  color:#fff;
 }
 
-h1 {
-  text-align: center;
+section{
+  display:none;
+  background:#fff;
+  padding:10px;
+  border-radius:10px;
 }
+section.active{display:block}
 
-.tabs {
-  display: flex;
-  gap: 5px;
-  margin-bottom: 10px;
-}
+table{width:100%;border-collapse:collapse}
+th,td{border:1px solid #ccc;padding:6px}
+th{background:#eee}
 
-.tabs button {
-  flex: 1;
-  padding: 10px;
-  border: none;
-  background: #ddd;
-  font-size: 16px;
-}
+.have{background:#d4edda}
 
-.tabs button.active {
-  background: #2f80ed;
-  color: white;
-}
-
-section {
-  display: none;
-  background: white;
-  padding: 15px;
-  border-radius: 10px;
-}
-
-section.active {
-  display: block;
-}
+input[type=text]{width:100%}
+input[type=number]{width:60px}
+button.small{padding:4px 8px}
 </style>
 </head>
 
@@ -62,65 +64,97 @@ section.active {
   <button data-tab="car">🚗 Авто</button>
 </div>
 
-<section id="home">
-  <h2>🏠 Вдома</h2>
-  <ul>
-    <li>Вода</li>
-    <li>Їжа</li>
-    <li>Аптечка</li>
-  </ul>
-</section>
-
-<section id="evac">
-  <h2>🎒 Евакуація</h2>
-  <ul>
-    <li>Документи</li>
-    <li>Рюкзак</li>
-    <li>Ліхтарик</li>
-  </ul>
-</section>
-
-<section id="car">
-  <h2>🚗 Авто</h2>
-  <ul>
-    <li>Аптечка авто</li>
-    <li>Ковдра</li>
-    <li>Зарядка</li>
-  </ul>
-</section>
+<section id="home"></section>
+<section id="evac"></section>
+<section id="car"></section>
 
 <script>
+// ===== ДАНІ =====
+const defaultData = {
+  home: ["Вода", "Їжа", "Аптечка"],
+  evac: ["Документи", "Рюкзак", "Ліхтарик"],
+  car:  ["Аптечка авто", "Ковдра", "Зарядка"]
+};
+
+let data = JSON.parse(localStorage.getItem("planData")) || defaultData;
+
+// ===== РЕНДЕР =====
+function renderSection(key){
+  const sec = document.getElementById(key);
+  sec.innerHTML = `
+    <h2>${key==="home"?"🏠 Вдома":key==="evac"?"🎒 Евакуація":"🚗 Авто"}</h2>
+    <table>
+      <tr><th>Маю</th><th>Річ</th><th></th></tr>
+      ${data[key].map((item,i)=>`
+        <tr>
+          <td><input type="checkbox" onchange="toggleHave(this)"></td>
+          <td>${item}</td>
+          <td><button class="small" onclick="removeItem('${key}',${i})">🗑️</button></td>
+        </tr>
+      `).join("")}
+    </table>
+    <br>
+    <button onclick="addItem('${key}')">➕ Додати річ</button>
+  `;
+}
+
+function renderAll(){
+  renderSection("home");
+  renderSection("evac");
+  renderSection("car");
+}
+
+// ===== ДІЇ =====
+function addItem(section){
+  const name = prompt("Назва речі:");
+  if(!name) return;
+  data[section].push(name);
+  save();
+  renderSection(section);
+}
+
+function removeItem(section, idx){
+  data[section].splice(idx,1);
+  save();
+  renderSection(section);
+}
+
+function toggleHave(cb){
+  cb.closest("tr").classList.toggle("have", cb.checked);
+}
+
+function save(){
+  localStorage.setItem("planData", JSON.stringify(data));
+}
+
+// ===== ВКЛАДКИ =====
 const buttons = document.querySelectorAll(".tabs button");
 const sections = document.querySelectorAll("section");
 
-function showTab(tab, push = true) {
-  sections.forEach(s => s.classList.remove("active"));
-  buttons.forEach(b => b.classList.remove("active"));
+function showTab(tab, push=true){
+  sections.forEach(s=>s.classList.remove("active"));
+  buttons.forEach(b=>b.classList.remove("active"));
 
   document.getElementById(tab).classList.add("active");
   document.querySelector(`[data-tab="${tab}"]`).classList.add("active");
 
-  if (push) {
-    history.pushState({ tab }, "", "#" + tab);
-  }
+  if(push) history.pushState({tab},"","#"+tab);
 }
 
-buttons.forEach(btn => {
-  btn.addEventListener("click", () => {
-    showTab(btn.dataset.tab);
-  });
+buttons.forEach(btn=>{
+  btn.addEventListener("click",()=>showTab(btn.dataset.tab));
 });
 
-window.addEventListener("popstate", e => {
-  const tab = e.state?.tab || "home";
-  showTab(tab, false);
+window.addEventListener("popstate",e=>{
+  showTab(e.state?.tab || "home", false);
 });
 
-const startTab = location.hash.replace("#", "") || "home";
-showTab(startTab, false);
+// ===== СТАРТ =====
+renderAll();
+showTab(location.hash.replace("#","") || "home", false);
 
-// Service Worker
-if ("serviceWorker" in navigator) {
+// ===== SW =====
+if("serviceWorker" in navigator){
   navigator.serviceWorker.register("sw.js");
 }
 </script>
