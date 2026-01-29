@@ -51,9 +51,9 @@ th{background:#eee}
 <h1>🛡️ План безпеки</h1>
 
 <div class="tabs">
-  <button onclick="goTab('home')" id="tab-home">🏠 Вдома</button>
-  <button onclick="goTab('evac')" id="tab-evac">🎒 Евакуація</button>
-  <button onclick="goTab('car')" id="tab-car">🚗 Авто</button>
+  <button id="tab-home" onclick="goTab('home')">🏠 Вдома</button>
+  <button id="tab-evac" onclick="goTab('evac')">🎒 Евакуація</button>
+  <button id="tab-car"  onclick="goTab('car')">🚗 Авто</button>
 </div>
 
 <section id="home"></section>
@@ -110,3 +110,4 @@ if("serviceWorker" in navigator){
 
 </body>
 </html>
+
