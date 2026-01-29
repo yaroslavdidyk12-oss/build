@@ -1,18 +1,21 @@
-const CACHE = "plan-safe-v1";
-const FILES = [
-  "./",
-  "./index.html",
-  "./manifest.json"
-];
+const CACHE_NAME = "plan-safe-v1";
 
-self.addEventListener("install",e=>{
-  e.waitUntil(
-    caches.open(CACHE).then(cache=>cache.addAll(FILES))
+self.addEventListener("install", event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache =>
+      cache.addAll([
+        "./",
+        "./index.html",
+        "./manifest.json"
+      ])
+    )
   );
 });
 
-self.addEventListener("fetch",e=>{
-  e.respondWith(
-    caches.match(e.request).then(res=>res || fetch(e.request))
+self.addEventListener("fetch", event => {
+  event.respondWith(
+    caches.match(event.request).then(response =>
+      response || fetch(event.request)
+    )
   );
 });
