@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#2f80ed">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>План безпеки</title>
@@ -60,6 +58,30 @@ tr:hover{background:#f1f1f1;}
 <div id="app"></div>
 
 <script>
+// ==================== PWA BACK BUTTON ====================
+const currentSection = { value: "home" };
+
+// Встановити історію при завантаженні
+window.addEventListener("load", ()=>{
+  history.replaceState({section:"home"}, "", "#home");
+  currentSection.value = "home";
+});
+
+// Обробка кнопки назад
+window.addEventListener("popstate", function(e){
+  const sec = e.state?.section || "home";
+  showOnlySection(sec);
+});
+
+// Показати лише одну секцію
+function showOnlySection(sectionKey){
+  document.querySelectorAll("section").forEach(sec=>sec.style.display="none");
+  const el = document.getElementById(sectionKey);
+  if(el) el.style.display="block";
+  currentSection.value = sectionKey;
+}
+
+// ==================== PWA APP LOGIC ====================
 let hours = 72;
 
 const baseData = {
@@ -98,6 +120,8 @@ function render(filter=""){
  Object.keys(data).forEach(sectionKey => {
    const sec = data[sectionKey];
    const sectionEl = document.createElement("section");
+   sectionEl.id = sectionKey;
+
    const titleEl = document.createElement("h2");
    titleEl.textContent = sec.title;
    sectionEl.appendChild(titleEl);
@@ -139,7 +163,9 @@ function render(filter=""){
        inputPerDay.checked = item.perDay;
        inputPerDay.onchange = function(){ item.perDay = this.checked; save(); render(); };
        tdPerDay.appendChild(inputPerDay);
-       tdPerDay.appendChild(document.createTextNode(" день"));
+       const label = document.createElement("span");
+       label.textContent = "день";
+       tdPerDay.appendChild(label);
 
        const tdRemove = document.createElement("td");
        const btnRemove = document.createElement("button");
@@ -147,7 +173,12 @@ function render(filter=""){
        btnRemove.onclick = function(){ removeItem(sectionKey, idx); };
        tdRemove.appendChild(btnRemove);
 
-       tr.append(tdHave,tdName,tdQty,tdPerDay,tdRemove);
+       tr.appendChild(tdHave);
+       tr.appendChild(tdName);
+       tr.appendChild(tdQty);
+       tr.appendChild(tdPerDay);
+       tr.appendChild(tdRemove);
+
        table.appendChild(tr);
      }
    });
@@ -161,61 +192,51 @@ function render(filter=""){
 
    app.appendChild(sectionEl);
  });
+ showOnlySection(currentSection.value);
 }
 
+// ======== CRUD FUNCTIONS ========
 function editName(section, idx, value){ data[section].items[idx].name = value; save(); }
-function editQty(section, idx, value){
- let v = Number(value);
- if(v>0){
-  data[section].items[idx].base = data[section].items[idx].perDay ? Math.ceil(v/(hours/24)) : v;
-  save(); render();
- }
+function editQty(section, idx, value){ 
+  let v = Number(value);
+  if(v>0){
+    data[section].items[idx].base = data[section].items[idx].perDay ? Math.ceil(v/(hours/24)) : v;
+    save(); render();
+  }
 }
 function addItem(section){
- let name = prompt("Назва речі","Нова річ") || "Нова річ";
- data[section].items.push({name,base:1,perDay:false});
- save(); render();
+  let name = prompt("Введіть назву нової речі","Нова річ");
+  if(!name) name="Нова річ";
+  data[section].items.push({name:name,base:1,perDay:false});
+  save(); render();
 }
 function removeItem(section, idx){ data[section].items.splice(idx,1); save(); render(); }
-function searchItems(){ render(searchInput.value); }
-function showMissing(){
- document.querySelectorAll("tr").forEach(r=>{
-  const c=r.querySelector("input[type=checkbox]");
-  r.style.display = c && !c.checked ? "table-row" : "none";
- });
-}
-function showAll(){ document.querySelectorAll("tr").forEach(r=>r.style.display="table-row"); }
-
+function searchItems(){ const val = document.getElementById("searchInput").value; render(val); }
+function showMissing(){ document.querySelectorAll("tr").forEach(r => { const c=r.querySelector("input[type=checkbox]"); if(c && !c.checked) r.style.display="table-row"; else r.style.display="none"; }); }
+function showAll(){ document.querySelectorAll("tr").forEach(r => r.style.display="table-row"); }
 function exportCSV(){
- let csv="Секція;Річ;Кількість;День\n";
- Object.values(data).forEach(sec=>{
-  sec.items.forEach(i=>{
-   csv+=`${sec.title};${i.name};${qty(i)};${i.perDay?"так":"ні"}\n`;
+  let csv = "Секція;Річ;Кількість;День\n";
+  Object.keys(data).forEach(sectionKey=>{
+    const sec = data[sectionKey];
+    sec.items.forEach(item=>{
+      csv += `${sec.title};${item.name};${qty(item)};${item.perDay ? "так" : "ні"}\n`;
+    });
   });
- });
- const a=document.createElement("a");
- a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
- a.download="plan_safe.csv";
- a.click();
+  const blob = new Blob([csv],{type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "plan_safe.csv";
+  a.click();
 }
-
-function resetData(){
- if(confirm("Відновити шаблон?")){
-  data=JSON.parse(JSON.stringify(baseData));
-  save(); render();
- }
-}
+function resetData(){ if(confirm("Ви дійсно хочете відновити шаблон?")){ data = JSON.parse(JSON.stringify(baseData)); save(); render(); } }
 
 render();
-</script>
 
-<!-- Service Worker -->
-<script>
+// ==================== REGISTER SERVICE WORKER ====================
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js");
 }
-</script>
 
+</script>
 </body>
 </html>
-
