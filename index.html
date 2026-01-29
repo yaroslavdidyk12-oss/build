@@ -236,7 +236,18 @@ render();
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js");
 }
+ // Запис стану при взаємодії (наприклад, зміна секції)
+function setState(sectionKey) {
+  history.pushState({ section: sectionKey }, "", "#" + sectionKey);
+}
+
+// Обробка кнопки "Назад" на Android
+window.addEventListener("popstate", function () {
+  // якщо історія є — просто не закриваємо додаток
+  // нічого не ховаємо
+});
 
 </script>
 </body>
 </html>
+
