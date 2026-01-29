@@ -1,234 +1,218 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uk">
 <head>
 <meta charset="UTF-8">
-<title>Inventory</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>План безпеки</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2f80ed">
 
 <style>
-body { font-family: Arial; background:#f4f6f8; padding:10px; }
-.container { max-width:1200px; margin:auto; background:#fff; padding:15px; border-radius:8px; }
-input, select, button { padding:8px; margin:4px; }
-table { width:100%; border-collapse:collapse; margin-top:10px; }
-th,td { border:1px solid #ccc; padding:6px; text-align:center; }
-th { background:#e9ecef; }
-.hidden { display:none; }
-button { cursor:pointer; }
+body{font-family:Arial,sans-serif;background:#f2f4f7;padding:15px;color:#333;}
+h1{text-align:center;margin-bottom:15px;}
+section{background:#fff;padding:15px;margin-bottom:20px;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,0.1);}
+table{width:100%;border-collapse:collapse;}
+th,td{border:1px solid #ccc;padding:6px;vertical-align:middle;}
+th{background:#eee;text-align:left;}
+.have{background:#d4edda;}
+.controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px;justify-content:center;}
+button,select,input[type=number],input[type=text]{padding:6px;border-radius:4px;border:1px solid #ccc;}
+input[type=text]{width:90%;box-sizing:border-box;}
+input[type=number]{width:60px;}
+td.flex-cell{display:flex;align-items:center;gap:5px;}
+td.flex-cell input[type=checkbox]{width:auto;margin:0;}
+td.flex-cell input[type=number]{width:50px;}
+tr:hover{background:#f1f1f1;}
+@media(max-width:600px){
+ table, tr, th, td{display:block;width:100%;box-sizing:border-box;}
+ tr{margin-bottom:10px;border-bottom:2px solid #ccc;}
+ th{display:none;}
+ td{border:none;padding:4px 0;}
+ td.flex-cell{display:flex;justify-content:space-between;}
+ td:nth-child(2){font-weight:bold;margin-bottom:5px;}
+}
 </style>
 </head>
-
 <body>
-<h1>Inventory</h1>
 
-<div class="container">
+<h1>🛡️ План безпеки</h1>
 
-<!-- ADD -->
-<input id="name" placeholder="Name">
-<select id="category">
-<option>Equipment</option><option>Dry Food</option><option>Electrical</option>
-<option>Medical</option><option>Tools</option><option>Other</option>
+<div class="controls">
+<label>Тривалість:
+<select onchange="setHours(this.value)">
+<option value="24">24 год</option>
+<option value="48">48 год</option>
+<option value="72" selected>72 год</option>
 </select>
-<input type="date" id="expiry">
-<input type="number" id="price" placeholder="Unit price">
-<input type="number" id="qty" placeholder="Qty">
-<button id="addBtn">Add</button>
-
-<hr>
-
-<label><input type="checkbox" id="groupToggle"> Group identical</label>
-
-<select id="sortBy">
-<option value="added">Sort: Added</option>
-<option value="expiry">Sort: Expiry</option>
-<option value="category">Sort: Category</option>
-</select>
-
-<button id="toggleArchive">Archive</button>
-
-<h3>Total cost: <span id="totalCost">0</span></h3>
-
-<table>
-<thead>
-<tr>
-<th>Name</th><th>Category</th><th>Qty</th><th>Expiry</th>
-<th>Price</th><th>Total</th><th>Actions</th>
-</tr>
-</thead>
-<tbody id="inventoryList"></tbody>
-</table>
-
-<div id="archiveSection" class="hidden">
-<h2>Archive</h2>
-<table>
-<thead>
-<tr><th>Name</th><th>Category</th><th>Qty</th><th>Actions</th></tr>
-</thead>
-<tbody id="archiveList"></tbody>
-</table>
+</label>
+<button onclick="showMissing()">🔍 Відсутнє</button>
+<button onclick="showAll()">🔁 Все</button>
+<button onclick="exportCSV()">📊 Excel</button>
+<button onclick="window.print()">📄 PDF</button>
+<button onclick="resetData()">♻️ Відновити шаблон</button>
+<input type="text" id="searchInput" placeholder="Пошук..." oninput="searchItems()">
 </div>
 
-</div>
+<div id="app"></div>
 
 <script>
-/* ===== DATA ===== */
-let inventory = JSON.parse(localStorage.getItem("inventory")) || [];
-let archive = JSON.parse(localStorage.getItem("archive")) || [];
+let hours = 72;
 
-function uid() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2);
-}
-
-/* ===== STORAGE ===== */
-function save() {
-  localStorage.setItem("inventory", JSON.stringify(inventory));
-  localStorage.setItem("archive", JSON.stringify(archive));
-  render();
-}
-
-/* ===== ADD ===== */
-document.getElementById("addBtn").onclick = () => {
-  let q = +qty.value || 0;
-  for (let i=0;i<q;i++) {
-    inventory.push({
-      id: uid(),
-      name: name.value,
-      category: category.value,
-      expiry: expiry.value || "",
-      price: +price.value || 0,
-      added: Date.now()
-    });
-  }
-  save();
+const baseData = {
+ home:{title:"🏠 Вдома",items:[
+  {name:"Вода (л)",base:3,perDay:true},
+  {name:"Їжа",base:2,perDay:true},
+  {name:"Аптечка",base:1,perDay:false},
+  {name:"Радіо",base:1,perDay:false},
+  {name:"Ліхтарик",base:1,perDay:false}
+ ]},
+ evac:{title:"🎒 Евакуація",items:[
+  {name:"CB-рація",base:1,perDay:false},
+  {name:"Запасний акумулятор",base:1,perDay:false},
+  {name:"Вода (л)",base:2,perDay:true},
+  {name:"Їжа швидка",base:2,perDay:true},
+  {name:"Документи",base:1,perDay:false}
+ ]},
+ car:{title:"🚗 Авто",items:[
+  {name:"Вода запасна (л)",base:3,perDay:true},
+  {name:"Аптечка авто",base:1,perDay:false},
+  {name:"Ковдра",base:2,perDay:false},
+  {name:"USB-зарядка",base:1,perDay:false}
+ ]}
 };
 
-/* ===== GROUPING ===== */
-function buildGroups(list) {
-  let map = {};
-  list.forEach(i=>{
-    let k = i.name + "|" + i.category;
-    if (!map[k]) map[k] = {
-      groupId: k,
-      name: i.name,
-      category: i.category,
-      items: []
-    };
-    map[k].items.push(i);
-  });
-  return Object.values(map);
+let data = JSON.parse(localStorage.getItem("plan_safe")) || baseData;
+
+function setHours(h){ hours = h; render(); }
+function qty(item){ return item.perDay ? Math.ceil(item.base*(hours/24)) : item.base; }
+function save(){ localStorage.setItem("plan_safe",JSON.stringify(data)); }
+
+function render(filter=""){
+ const app = document.getElementById("app");
+ app.innerHTML = "";
+
+ Object.keys(data).forEach(sectionKey => {
+   const sec = data[sectionKey];
+   const sectionEl = document.createElement("section");
+   const titleEl = document.createElement("h2");
+   titleEl.textContent = sec.title;
+   sectionEl.appendChild(titleEl);
+
+   const table = document.createElement("table");
+   const header = document.createElement("tr");
+   header.innerHTML = "<th>Маю</th><th>Річ</th><th>К-сть</th><th>День</th><th>Дія</th>";
+   table.appendChild(header);
+
+   sec.items.forEach((item, idx) => {
+     if(item.name.toLowerCase().includes(filter.toLowerCase())){
+       const tr = document.createElement("tr");
+
+       const tdHave = document.createElement("td");
+       tdHave.className="flex-cell";
+       const checkbox = document.createElement("input");
+       checkbox.type="checkbox";
+       checkbox.onchange = function(){ tr.classList.toggle("have", this.checked); };
+       tdHave.appendChild(checkbox);
+
+       const tdName = document.createElement("td");
+       const inputName = document.createElement("input");
+       inputName.type = "text";
+       inputName.value = item.name;
+       inputName.onchange = function(){ editName(sectionKey, idx, this.value); };
+       tdName.appendChild(inputName);
+
+       const tdQty = document.createElement("td");
+       const inputQty = document.createElement("input");
+       inputQty.type = "number";
+       inputQty.value = qty(item);
+       inputQty.min = 1;
+       inputQty.onchange = function(){ editQty(sectionKey, idx, this.value); };
+       tdQty.appendChild(inputQty);
+
+       const tdPerDay = document.createElement("td");
+       const inputPerDay = document.createElement("input");
+       inputPerDay.type = "checkbox";
+       inputPerDay.checked = item.perDay;
+       inputPerDay.onchange = function(){ item.perDay = this.checked; save(); render(); };
+       tdPerDay.appendChild(inputPerDay);
+       tdPerDay.appendChild(document.createTextNode(" день"));
+
+       const tdRemove = document.createElement("td");
+       const btnRemove = document.createElement("button");
+       btnRemove.textContent = "🗑️";
+       btnRemove.onclick = function(){ removeItem(sectionKey, idx); };
+       tdRemove.appendChild(btnRemove);
+
+       tr.append(tdHave,tdName,tdQty,tdPerDay,tdRemove);
+       table.appendChild(tr);
+     }
+   });
+
+   sectionEl.appendChild(table);
+
+   const addBtn = document.createElement("button");
+   addBtn.textContent = "➕ Додати нову річ";
+   addBtn.onclick = function(){ addItem(sectionKey); };
+   sectionEl.appendChild(addBtn);
+
+   app.appendChild(sectionEl);
+ });
 }
 
-function minExpiry(items) {
-  return items.map(i=>i.expiry).filter(Boolean).sort()[0] || "-";
+function editName(section, idx, value){ data[section].items[idx].name = value; save(); }
+function editQty(section, idx, value){
+ let v = Number(value);
+ if(v>0){
+  data[section].items[idx].base = data[section].items[idx].perDay ? Math.ceil(v/(hours/24)) : v;
+  save(); render();
+ }
+}
+function addItem(section){
+ let name = prompt("Назва речі","Нова річ") || "Нова річ";
+ data[section].items.push({name,base:1,perDay:false});
+ save(); render();
+}
+function removeItem(section, idx){ data[section].items.splice(idx,1); save(); render(); }
+function searchItems(){ render(searchInput.value); }
+function showMissing(){
+ document.querySelectorAll("tr").forEach(r=>{
+  const c=r.querySelector("input[type=checkbox]");
+  r.style.display = c && !c.checked ? "table-row" : "none";
+ });
+}
+function showAll(){ document.querySelectorAll("tr").forEach(r=>r.style.display="table-row"); }
+
+function exportCSV(){
+ let csv="Секція;Річ;Кількість;День\n";
+ Object.values(data).forEach(sec=>{
+  sec.items.forEach(i=>{
+   csv+=`${sec.title};${i.name};${qty(i)};${i.perDay?"так":"ні"}\n`;
+  });
+ });
+ const a=document.createElement("a");
+ a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+ a.download="plan_safe.csv";
+ a.click();
 }
 
-/* ===== SORT ===== */
-function sortGroups(groups) {
-  let m = sortBy.value;
-  if (m==="category")
-    groups.sort((a,b)=>a.category.localeCompare(b.category));
-  if (m==="expiry")
-    groups.sort((a,b)=>minExpiry(a.items).localeCompare(minExpiry(b.items)));
-  if (m==="added")
-    groups.sort((a,b)=>
-      Math.min(...a.items.map(i=>i.added)) -
-      Math.min(...b.items.map(i=>i.added))
-    );
-}
-
-/* ===== ACTIONS ===== */
-document.body.addEventListener("click", e=>{
-  let btn = e.target.closest("button[data-action]");
-  if (!btn) return;
-
-  let groupId = btn.dataset.group;
-  let src = btn.dataset.src;
-  let list = src==="inventory" ? inventory : archive;
-  let groups = buildGroups(list);
-  let group = groups.find(g=>g.groupId===groupId);
-  if (!group) return;
-
-  if (btn.dataset.action==="remove-one") {
-    let target = [...group.items]
-      .sort((a,b)=>(a.expiry||"9999").localeCompare(b.expiry||"9999"))[0];
-    list.splice(list.findIndex(i=>i.id===target.id),1);
-  }
-
-  if (btn.dataset.action==="remove-all") {
-    if (!confirm("Are you sure?")) return;
-    let ids = group.items.map(i=>i.id);
-    for (let i=list.length-1;i>=0;i--)
-      if (ids.includes(list[i].id)) list.splice(i,1);
-  }
-
-  if (btn.dataset.action==="archive") {
-    group.items.forEach(i=>archive.push(i));
-    let ids = group.items.map(i=>i.id);
-    inventory = inventory.filter(i=>!ids.includes(i.id));
-  }
-
-  if (btn.dataset.action==="restore") {
-    group.items.forEach(i=>inventory.push(i));
-    let ids = group.items.map(i=>i.id);
-    archive = archive.filter(i=>!ids.includes(i.id));
-  }
-
-  save();
-});
-
-/* ===== UI ===== */
-document.getElementById("toggleArchive").onclick = () =>
-  archiveSection.classList.toggle("hidden");
-
-document.getElementById("groupToggle").onchange = render;
-document.getElementById("sortBy").onchange = render;
-
-/* ===== RENDER ===== */
-function render() {
-  inventoryList.innerHTML = "";
-  archiveList.innerHTML = "";
-  let total = 0;
-
-  let groups = buildGroups(inventory);
-  sortGroups(groups);
-
-  groups.forEach(g=>{
-    let sum = g.items.reduce((s,i)=>s+i.price,0);
-    total += sum;
-
-    inventoryList.innerHTML += `
-    <tr>
-    <td>${g.name}</td>
-    <td>${g.category}</td>
-    <td>${g.items.length}</td>
-    <td>${minExpiry(g.items)}</td>
-    <td>${g.items[0].price}</td>
-    <td>${sum.toFixed(2)}</td>
-    <td>
-      <button data-action="remove-one" data-group="${g.groupId}" data-src="inventory">-1</button>
-      <button data-action="remove-all" data-group="${g.groupId}" data-src="inventory">Delete</button>
-      <button data-action="archive" data-group="${g.groupId}" data-src="inventory">Archive</button>
-    </td>
-    </tr>`;
-  });
-
-  buildGroups(archive).forEach(g=>{
-    archiveList.innerHTML += `
-    <tr>
-    <td>${g.name}</td>
-    <td>${g.category}</td>
-    <td>${g.items.length}</td>
-    <td>
-      <button data-action="remove-one" data-group="${g.groupId}" data-src="archive">-1</button>
-      <button data-action="remove-all" data-group="${g.groupId}" data-src="archive">Delete</button>
-      <button data-action="restore" data-group="${g.groupId}" data-src="archive">Restore</button>
-    </td>
-    </tr>`;
-  });
-
-  totalCost.innerText = total.toFixed(2);
+function resetData(){
+ if(confirm("Відновити шаблон?")){
+  data=JSON.parse(JSON.stringify(baseData));
+  save(); render();
+ }
 }
 
 render();
 </script>
+
+<!-- Service Worker -->
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}
+</script>
+
 </body>
 </html>
