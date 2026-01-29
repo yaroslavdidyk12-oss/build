@@ -1,10 +1,7 @@
 {
   "name": "План безпеки",
   "short_name": "Безпека",
-  "description": "Офлайн план безпеки для дому, евакуації та авто",
-  "lang": "uk",
   "start_url": "./index.html",
-  "scope": "./",
   "display": "standalone",
   "background_color": "#f2f4f7",
   "theme_color": "#2f80ed",
