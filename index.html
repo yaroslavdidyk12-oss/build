@@ -5,45 +5,49 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>План безпеки</title>
 
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2f80ed">
+
 <style>
 body {
+  margin: 0;
+  padding: 10px;
   font-family: Arial, sans-serif;
-  background:#f2f4f7;
-  margin:0;
-  padding:10px;
+  background: #f2f4f7;
 }
 
-h1 { text-align:center; }
+h1 {
+  text-align: center;
+}
 
 .tabs {
-  display:flex;
-  gap:5px;
-  margin-bottom:10px;
+  display: flex;
+  gap: 5px;
+  margin-bottom: 10px;
 }
 
 .tabs button {
-  flex:1;
-  padding:10px;
-  border:none;
-  background:#ddd;
-  font-size:16px;
-  cursor:pointer;
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: #ddd;
+  font-size: 16px;
 }
 
 .tabs button.active {
-  background:#2f80ed;
-  color:white;
+  background: #2f80ed;
+  color: white;
 }
 
 section {
-  display:none;
-  background:white;
-  padding:15px;
-  border-radius:10px;
+  display: none;
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
 }
 
 section.active {
-  display:block;
+  display: block;
 }
 </style>
 </head>
@@ -60,17 +64,29 @@ section.active {
 
 <section id="home">
   <h2>🏠 Вдома</h2>
-  <p>Вода, їжа, аптечка</p>
+  <ul>
+    <li>Вода</li>
+    <li>Їжа</li>
+    <li>Аптечка</li>
+  </ul>
 </section>
 
 <section id="evac">
   <h2>🎒 Евакуація</h2>
-  <p>Документи, рюкзак, ліхтарик</p>
+  <ul>
+    <li>Документи</li>
+    <li>Рюкзак</li>
+    <li>Ліхтарик</li>
+  </ul>
 </section>
 
 <section id="car">
   <h2>🚗 Авто</h2>
-  <p>Аптечка, ковдра, зарядка</p>
+  <ul>
+    <li>Аптечка авто</li>
+    <li>Ковдра</li>
+    <li>Зарядка</li>
+  </ul>
 </section>
 
 <script>
@@ -82,29 +98,31 @@ function showTab(tab, push = true) {
   buttons.forEach(b => b.classList.remove("active"));
 
   document.getElementById(tab).classList.add("active");
-  document.querySelector(`button[data-tab="${tab}"]`).classList.add("active");
+  document.querySelector(`[data-tab="${tab}"]`).classList.add("active");
 
   if (push) {
-    history.pushState({tab}, "", "#" + tab);
+    history.pushState({ tab }, "", "#" + tab);
   }
 }
 
-// кліки по вкладках
 buttons.forEach(btn => {
   btn.addEventListener("click", () => {
     showTab(btn.dataset.tab);
   });
 });
 
-// кнопка "назад"
 window.addEventListener("popstate", e => {
   const tab = e.state?.tab || "home";
   showTab(tab, false);
 });
 
-// стартова вкладка
-const startTab = location.hash.replace("#","") || "home";
+const startTab = location.hash.replace("#", "") || "home";
 showTab(startTab, false);
+
+// Service Worker
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}
 </script>
 
 </body>
