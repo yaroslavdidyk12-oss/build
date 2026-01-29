@@ -8,20 +8,19 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#2f80ed">
 
-<!-- Підключаємо jsPDF та FileSaver для PDF/Excel -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
 <style>
 body{font-family:Arial,sans-serif;background:#f2f4f7;margin:0;padding:10px}
 h1{text-align:center}
-
 .tabs{display:flex;gap:5px;margin-bottom:10px}
 .tabs button{flex:1;padding:10px;border:none;background:#ddd;font-size:15px;cursor:pointer}
 .tabs button.active{background:#2f80ed;color:#fff}
 
 .controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:10px}
 .controls input[type=text]{padding:5px;flex:1}
+
 section{display:none;background:#fff;padding:10px;border-radius:10px}
 section.active{display:block}
 
@@ -68,26 +67,35 @@ button.small{padding:3px 6px;font-size:14px}
 let hours = 72;
 
 const baseData = {
-  home:[
-    {name:"Вода (л)", base:3, perDay:true},
-    {name:"Їжа", base:2, perDay:true},
-    {name:"Аптечка", base:1, perDay:false},
-    {name:"Радіо", base:1, perDay:false},
-    {name:"Ліхтарик", base:1, perDay:false}
-  ],
-  evac:[
-    {name:"CB-рація", base:1, perDay:false},
-    {name:"Запасний акумулятор", base:1, perDay:false},
-    {name:"Вода (л)", base:2, perDay:true},
-    {name:"Їжа швидка", base:2, perDay:true},
-    {name:"Документи", base:1, perDay:false}
-  ],
-  car:[
-    {name:"Вода запасна (л)", base:3, perDay:true},
-    {name:"Аптечка авто", base:1, perDay:false},
-    {name:"Ковдра", base:2, perDay:false},
-    {name:"USB-зарядка", base:1, perDay:false}
-  ]
+  home: {
+    title:"🏠 Вдома",
+    items:[
+      {name:"Вода (л)", base:3, perDay:true},
+      {name:"Їжа", base:2, perDay:true},
+      {name:"Аптечка", base:1, perDay:false},
+      {name:"Радіо", base:1, perDay:false},
+      {name:"Ліхтарик", base:1, perDay:false}
+    ]
+  },
+  evac: {
+    title:"🎒 Евакуація",
+    items:[
+      {name:"CB-рація", base:1, perDay:false},
+      {name:"Запасний акумулятор", base:1, perDay:false},
+      {name:"Вода (л)", base:2, perDay:true},
+      {name:"Їжа швидка", base:2, perDay:true},
+      {name:"Документи", base:1, perDay:false}
+    ]
+  },
+  car: {
+    title:"🚗 Авто",
+    items:[
+      {name:"Вода запасна (л)", base:3, perDay:true},
+      {name:"Аптечка авто", base:1, perDay:false},
+      {name:"Ковдра", base:2, perDay:false},
+      {name:"USB-зарядка", base:1, perDay:false}
+    ]
+  }
 };
 
 let data = JSON.parse(localStorage.getItem("plan_safe")) || JSON.parse(JSON.stringify(baseData));
@@ -99,8 +107,8 @@ function qty(item){ return item.perDay ? Math.ceil(item.base*(hours/24)) : item.
 function render(filter=""){
   ["home","evac","car"].forEach(sectionKey=>{
     const sec = document.getElementById(sectionKey);
-    sec.innerHTML = `<h2>${data[sectionKey].title || sectionKey}</h2><table><tr><th>Маю</th><th>Річ</th><th>К-сть</th><th>День</th><th>Дія</th></tr>`;
-    data[sectionKey].items?.forEach((item,idx)=>{
+    sec.innerHTML = `<h2>${data[sectionKey].title}</h2><table><tr><th>Маю</th><th>Річ</th><th>К-сть</th><th>День</th><th>Дія</th></tr>`;
+    data[sectionKey].items.forEach((item,idx)=>{
       if(item.name.toLowerCase().includes(filter.toLowerCase())){
         sec.innerHTML += `<tr>
           <td><input type="checkbox" onchange="this.closest('tr').classList.toggle('have',this.checked)"></td>
@@ -123,7 +131,8 @@ function editQty(section,idx,value){
 }
 function addItem(section){
   let name=prompt("Введіть назву нової речі","Нова річ"); if(!name) name="Нова річ";
-  data[section].items.push({name:name,base:1,perDay:false});
+  if(!data[section].items) data[section].items = [];
+  data[section].items.push({name:name, base:1, perDay:false});
   save(); render();
 }
 function removeItem(section,idx){ data[section].items.splice(idx,1); save(); render(); }
@@ -138,8 +147,9 @@ function resetData(){ if(confirm("Ви дійсно хочете віднови�
 function exportCSV(){
   let csv="Секція;Річ;Кількість;День\n";
   ["home","evac","car"].forEach(sectionKey=>{
-    const sec=data[sectionKey];
-    sec.items.forEach(item=>{ csv+=`${sec.title||sectionKey};${item.name};${qty(item)};${item.perDay?'так':'ні'}\n`; });
+    data[sectionKey].items.forEach(item=>{
+      csv+=`${data[sectionKey].title};${item.name};${qty(item)};${item.perDay?'так':'ні'}\n`;
+    });
   });
   const blob=new Blob([csv],{type:"text/csv"});
   saveAs(blob,"plan_safe.csv");
@@ -151,11 +161,9 @@ function exportPDF(){
   let y=10;
   ["home","evac","car"].forEach(sectionKey=>{
     const sec=data[sectionKey];
-    doc.setFontSize(14);
-    doc.text(sec.title||sectionKey,10,y); y+=6;
+    doc.setFontSize(14); doc.text(sec.title,10,y); y+=6;
     sec.items.forEach(item=>{
-      doc.setFontSize(12);
-      doc.text(`- ${item.name} (${qty(item)}) день: ${item.perDay?'так':'ні'}`,10,y); y+=5;
+      doc.setFontSize(12); doc.text(`- ${item.name} (${qty(item)}) день: ${item.perDay?'так':'ні'}`,10,y); y+=5;
     });
     y+=4;
   });
