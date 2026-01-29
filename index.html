@@ -304,20 +304,16 @@ function resetData(){
 
 // ===== ЕКСПОРТ =====
 function exportCSV(){
-  let csv="Секція;Річ;Кількість;День\n";
+  let csv = "\uFEFFСекція;Річ;Кількість;День\n"; // ← BOM
+
   ["home","evac","car"].forEach(section=>{
-    data[section].items.forEach(item=>csv+=`${data[section].title};${item.name};${qty(item)};${item.perDay?'так':'ні'}\n`);
+    data[section].items.forEach(item=>{
+      csv += `${data[section].title};${item.name};${qty(item)};${item.perDay ? "так" : "ні"}\n`;
+    });
   });
-  const blob=new Blob([csv],{type:"text/csv"}); saveAs(blob,"plan_safe.csv");
-}
-function exportPDF(){
-  const { jsPDF } = window.jspdf; const doc = new jsPDF(); let y=10;
-  ["home","evac","car"].forEach(section=>{
-    const sec=data[section]; doc.setFontSize(14); doc.text(sec.title,10,y); y+=6;
-    sec.items.forEach(item=>{ doc.setFontSize(12); doc.text(`- ${item.name} (${qty(item)}) день: ${item.perDay?'так':'ні'}`,10,y); y+=5; });
-    y+=4;
-  });
-  doc.save("plan_safe.pdf");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  saveAs(blob, "plan_safe.csv");
 }
 
 // ===== ВКЛАДКИ =====
