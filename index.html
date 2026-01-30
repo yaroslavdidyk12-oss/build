@@ -8,157 +8,64 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#2f80ed">
 
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
 <style>
-body {
-  font-family: Arial, sans-serif;
-  background: #f2f4f7;
-  margin: 0;
-  padding: 8px;
-}
-h1 {
-  text-align: center;
-  margin-bottom: 8px;
-  font-size: 20px;
-}
-.tabs {
-  display: flex;
-  gap: 3px;
-  margin-bottom: 8px;
-}
-.tabs button {
-  flex: 1;
-  padding: 8px;
-  border: none;
-  background: #ddd;
-  font-size: 12px;
-  cursor: pointer;
-  border-radius: 5px;
-}
-.tabs button.active {
-  background: #2f80ed;
-  color: #fff;
-}
-.controls {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  justify-content: center;
-  margin-bottom: 8px;
-}
-.controls input[type=text] {
-  padding: 4px;
-  flex: 1;
-  font-size: 12px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-}
+body{font-family:Arial,sans-serif;background:#f2f4f7;margin:0;padding:8px}
+h1{text-align:center;margin:6px 0}
+.tabs{display:flex;gap:4px;margin-bottom:6px}
+.tabs button{flex:1;padding:8px;border:none;border-radius:5px;background:#ddd}
+.tabs button.active{background:#2f80ed;color:#fff}
 
-/* Список рядків */
-.item-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: #fff;
-  padding: 4px;
-  border-radius: 5px;
-  margin-bottom: 3px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-  flex-wrap: wrap;
-}
-.item-row.have {
-  background: #d4edda;
-}
-.item-row input[type=text] {
-  width: 100px;
-  padding: 2px;
-  font-size: 12px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-}
-.item-row input[type=number] {
-  width: 40px;
-  padding: 2px;
-  font-size: 12px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-}
-.item-row input[type=checkbox] {
-  width: auto;
-  margin: 0;
-}
-.item-row button.small {
-  padding: 2px 4px;
-  font-size: 12px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-  cursor: pointer;
-}
-.item-row span {
-  font-size: 12px;
-}
+.controls{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
+.controls button,select{padding:6px;font-size:12px}
 
-/* Відмічені речі під таблицею */
-#marked-items {
-  margin-top: 6px;
-  padding: 4px;
-  background: #e9f7ef;
-  border-radius: 5px;
-  font-size: 12px;
+.item-row{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  background:#fff;
+  padding:4px;
+  border-radius:5px;
+  margin-bottom:3px;
 }
-#marked-items h3 {
-  margin: 0 0 3px 0;
-  font-size: 12px;
-}
+.item-row.have{background:#d4edda}
+.item-row input[type=text]{width:90px}
+.item-row input[type=number]{width:40px}
+.item-row button{padding:2px 5px}
 
-@media(max-width:600px){
-  .item-row {
-    flex-wrap: wrap;
-    justify-content: space-between;
-  }
-  .item-row input[type=text] {
-    width: 80px;
-  }
-  .item-row input[type=number] {
-    width: 35px;
-  }
-  .tabs button {
-    font-size: 11px;
-    padding: 6px;
-  }
-  .controls input[type=text] {
-    font-size: 11px;
-    padding: 4px;
-  }
-}
-section {
-  display: none;
-}
-section.active {
-  display: block;
+section{display:none}
+section.active{display:block}
+
+.add-btn{margin-top:6px}
+
+#marked-items{
+  background:#e9f7ef;
+  padding:6px;
+  border-radius:5px;
+  margin-top:6px;
 }
 </style>
 </head>
+
 <body>
 
 <h1>🛡️ План безпеки</h1>
 
 <div class="controls">
-  <label>Тривалість:
-    <select id="hoursSelect">
-      <option value="24">24 год</option>
-      <option value="48">48 год</option>
-      <option value="72" selected>72 год</option>
-    </select>
-  </label>
+  <select id="hoursSelect">
+    <option value="24">24 год</option>
+    <option value="48">48 год</option>
+    <option value="72" selected>72 год</option>
+  </select>
+
   <button onclick="showMissing()">🔍 Відсутнє</button>
   <button onclick="showAll()">🔁 Все</button>
-  <button onclick="exportCSV()">📊 Excel</button>
+  <button onclick="exportXLSX()">📊 Excel</button>
+  <button onclick="exportPrintXLSX()">🖨 Чек-лист</button>
   <button onclick="exportPDF()">📄 PDF</button>
-  <button onclick="resetData()">♻️ Відновити шаблон</button>
-  <input type="text" id="searchInput" placeholder="Пошук..." oninput="searchItems()">
+  <button onclick="resetData()">♻️ Відновити</button>
 </div>
 
 <div class="tabs">
@@ -174,160 +81,169 @@ section.active {
 <div id="marked-items"></div>
 
 <script>
-let hours = "72";
+let hours="72";
 
-const baseData = {
-  home: { title:"🏠 Вдома", items:[
-      {name:"Вода (л)", base:3, perDay:true},
-      {name:"Їжа", base:2, perDay:true},
-      {name:"Аптечка", base:1, perDay:false},
-      {name:"Радіо", base:1, perDay:false},
-      {name:"Ліхтарик", base:1, perDay:false}
-  ]},
-  evac: { title:"🎒 Евакуація", items:[
-      {name:"CB-рація", base:1, perDay:false},
-      {name:"Запасний акумулятор", base:1, perDay:false},
-      {name:"Вода (л)", base:2, perDay:true},
-      {name:"Їжа швидка", base:2, perDay:true},
-      {name:"Документи", base:1, perDay:false}
-  ]},
-  car: { title:"🚗 Авто", items:[
-      {name:"Вода запасна (л)", base:3, perDay:true},
-      {name:"Аптечка авто", base:1, perDay:false},
-      {name:"Ковдра", base:2, perDay:false},
-      {name:"USB-зарядка", base:1, perDay:false}
-  ]}
+const baseData={
+ home:{title:"Вдома",items:[
+  {name:"Вода (л)",base:3,perDay:true},
+  {name:"Їжа",base:2,perDay:true},
+  {name:"Аптечка",base:1,perDay:false}
+ ]},
+ evac:{title:"Евакуація",items:[
+  {name:"Документи",base:1,perDay:false},
+  {name:"Вода (л)",base:2,perDay:true}
+ ]},
+ car:{title:"Авто",items:[
+  {name:"Аптечка авто",base:1,perDay:false},
+  {name:"Ковдра",base:2,perDay:false}
+ ]}
 };
 
-let stored = JSON.parse(localStorage.getItem("plan_safe"));
-let data = (!stored || !stored.home) ? JSON.parse(JSON.stringify(baseData)) : stored;
+let data=JSON.parse(localStorage.getItem("plan_safe"))||JSON.parse(JSON.stringify(baseData));
 
-// Ініціалізація checked для кожного часу
-["home","evac","car"].forEach(sec=>{
-  data[sec].items.forEach(item=>{
-    if(!item.checked) item.checked={"24":false,"48":false,"72":false};
-  });
+["home","evac","car"].forEach(s=>{
+ data[s].items.forEach(i=>{
+  if(!i.checked) i.checked={24:false,48:false,72:false};
+ });
 });
 
-function save(){ localStorage.setItem("plan_safe",JSON.stringify(data)); }
-function qty(item){ return item.perDay ? Math.ceil(item.base*(hours/24)) : item.base; }
+function save(){localStorage.setItem("plan_safe",JSON.stringify(data))}
+function qty(i){return i.perDay?Math.ceil(i.base*(hours/24)):i.base}
 
-function render(filter=""){
-  ["home","evac","car"].forEach(sectionKey=>{
-    const sec = document.getElementById(sectionKey);
-    sec.innerHTML = '';
-    const title = document.createElement("h2");
-    title.textContent = data[sectionKey].title; sec.appendChild(title);
-
-    data[sectionKey].items.forEach((item,idx)=>{
-      if(item.name.toLowerCase().includes(filter.toLowerCase())){
-        const row = document.createElement("div"); row.className="item-row";
-
-        const chk = document.createElement("input"); chk.type="checkbox";
-        chk.checked = item.checked[hours];
-        chk.onchange=()=>{ item.checked[hours] = chk.checked; save(); renderMarked(); row.classList.toggle("have",chk.checked); };
-        if(chk.checked) row.classList.add("have");
-        row.appendChild(chk);
-
-        const inputName = document.createElement("input"); inputName.type="text"; inputName.value=item.name; inputName.onchange=()=>editName(sectionKey,idx,inputName.value); row.appendChild(inputName);
-
-        const inputQty = document.createElement("input"); inputQty.type="number"; inputQty.min=1; inputQty.value=qty(item); inputQty.onchange=()=>editQty(sectionKey,idx,inputQty.value); row.appendChild(inputQty);
-
-        const chkDay = document.createElement("input"); chkDay.type="checkbox"; chkDay.checked=item.perDay; chkDay.onchange=()=>{ item.perDay=chkDay.checked; save(); render(); }; row.appendChild(chkDay);
-        const lblDay = document.createElement("span"); lblDay.textContent="день"; row.appendChild(lblDay);
-
-        const btnDel = document.createElement("button"); btnDel.className="small"; btnDel.textContent="🗑️"; btnDel.onclick=()=>removeItem(sectionKey,idx); row.appendChild(btnDel);
-
-        sec.appendChild(row);
-      }
-    });
-
-    const btnAdd = document.createElement("button"); btnAdd.textContent="➕ Додати нову річ"; btnAdd.onclick = ()=>addItem(sectionKey); sec.appendChild(btnAdd);
+function render(){
+ ["home","evac","car"].forEach(sec=>{
+  const el=document.getElementById(sec);
+  el.innerHTML=`<h3>${data[sec].title}</h3>`;
+  data[sec].items.forEach((i,idx)=>{
+   const r=document.createElement("div");
+   r.className="item-row"+(i.checked[hours]?" have":"");
+   r.innerHTML=`
+    <input type="checkbox" ${i.checked[hours]?"checked":""}>
+    <input type="text" value="${i.name}">
+    <input type="number" value="${qty(i)}">
+    <input type="checkbox" ${i.perDay?"checked":""}>день
+    <button>🗑️</button>`;
+   r.children[0].onchange=e=>{i.checked[hours]=e.target.checked;save();render()};
+   r.children[1].onchange=e=>{i.name=e.target.value;save()};
+   r.children[2].onchange=e=>{
+    const v=Number(e.target.value);
+    if(v>0){
+     i.base=i.perDay?Math.ceil(v/(hours/24)):v;
+     save();render();
+    }
+   };
+   r.children[3].onchange=e=>{i.perDay=e.target.checked;save();render()};
+   r.children[4].onclick=()=>{data[sec].items.splice(idx,1);save();render()};
+   el.appendChild(r);
   });
-  renderMarked();
+
+  const add=document.createElement("button");
+  add.textContent="➕ Додати річ";
+  add.className="add-btn";
+  add.onclick=()=>addItem(sec);
+  el.appendChild(add);
+ });
+ renderMarked();
 }
 
-// ===== ВІДМІЧЕНІ =====
+function addItem(section){
+ const name=prompt("Назва нової речі","");
+ if(!name) return;
+ data[section].items.push({
+  name,
+  base:1,
+  perDay:false,
+  checked:{24:false,48:false,72:false}
+ });
+ save();render();
+}
+
 function renderMarked(){
-  const div = document.getElementById("marked-items");
-  div.innerHTML = "<h3>Відмічені речі для " + hours + " год</h3>";
-  ["home","evac","car"].forEach(sectionKey=>{
-    const sec = data[sectionKey];
-    sec.items.forEach(item=>{
-      if(item.checked[hours]){
-        const span = document.createElement("div");
-        span.textContent = sec.title + ": " + item.name + " ("+qty(item)+")";
-        div.appendChild(span);
-      }
-    });
+ const d=document.getElementById("marked-items");
+ d.innerHTML="<b>Відмічені:</b><br>";
+ ["home","evac","car"].forEach(s=>{
+  data[s].items.forEach(i=>{
+   if(i.checked[hours]) d.innerHTML+=`${data[s].title}: ${i.name} (${qty(i)})<br>`;
   });
+ });
 }
 
-// ===== ДІЇ =====
-function editName(section,idx,val){ data[section].items[idx].name=val; save(); render(); }
-function editQty(section,idx,val){ let v=Number(val); if(v>0){ data[section].items[idx].base = data[section].items[idx].perDay ? Math.ceil(v/(hours/24)) : v; save(); render(); } }
-function addItem(section){ let name=prompt("Введіть назву нової речі","Нова річ"); if(!name) name="Нова річ"; data[section].items.push({name:name, base:1, perDay:false, checked:{"24":false,"48":false,"72":false}}); save(); render(); }
-function removeItem(section,idx){ data[section].items.splice(idx,1); save(); render(); }
-function searchItems(){ render(document.getElementById("searchInput").value); }
+function showMissing(){
+ document.querySelectorAll(".item-row").forEach(r=>{
+  r.style.display=r.classList.contains("have")?"none":"flex";
+ });
+}
+function showAll(){
+ document.querySelectorAll(".item-row").forEach(r=>r.style.display="flex");
+}
 
-// ===== ВИПРАВЛЕНІ КНОПКИ ВІДСУТНЄ/ВСЕ =====
-function showMissing() {
-  ["home","evac","car"].forEach(sectionKey=>{
-    data[sectionKey].items.forEach((item,idx)=>{
-      const secEl = document.getElementById(sectionKey);
-      const row = secEl.children[idx+1]; // +1 через <h2>
-      if(row) row.style.display = item.checked[hours] ? "none" : "flex";
-    });
+function resetData(){
+ if(confirm("Відновити початковий шаблон?")){
+  data=JSON.parse(JSON.stringify(baseData));
+  ["home","evac","car"].forEach(s=>{
+   data[s].items.forEach(i=>i.checked={24:false,48:false,72:false});
   });
+  save();render();
+ }
 }
 
-function showAll() {
-  ["home","evac","car"].forEach(sectionKey=>{
-    data[sectionKey].items.forEach((item,idx)=>{
-      const secEl = document.getElementById(sectionKey);
-      const row = secEl.children[idx+1]; // +1 через <h2>
-      if(row) row.style.display = "flex";
-    });
+document.getElementById("hoursSelect").onchange=e=>{hours=e.target.value;render()};
+
+function exportXLSX(){
+ const wb=XLSX.utils.book_new();
+ ["home","evac","car"].forEach(s=>{
+  const rows=[["Річ","К-сть"]];
+  data[s].items.forEach(i=>{
+   if(i.checked[hours]) rows.push([i.name,qty(i)]);
   });
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"]=[{wch:30},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws,data[s].title);
+ });
+ XLSX.writeFile(wb,`plan_${hours}h.xlsx`);
 }
 
-function setHours(h){ hours=h; render(); }
-document.getElementById("hoursSelect").addEventListener("change",e=>setHours(e.target.value));
-
-function resetData(){ 
-  if(confirm("Ви дійсно хочете відновити шаблон?")){
-    data=JSON.parse(JSON.stringify(baseData)); 
-    ["home","evac","car"].forEach(sec=>data[sec].items.forEach(item=>item.checked={"24":false,"48":false,"72":false}));
-    save(); render(); 
-  } 
-}
-
-// ===== ЕКСПОРТ =====
-function exportCSV(){
-  let csv = "\uFEFFСекція;Річ;Кількість;День\n"; // ← BOM
-
-  ["home","evac","car"].forEach(section=>{
-    data[section].items.forEach(item=>{
-      csv += `${data[section].title};${item.name};${qty(item)};${item.perDay ? "так" : "ні"}\n`;
-    });
+function exportPrintXLSX(){
+ const rows=[["☐","Річ","К-сть"]];
+ ["home","evac","car"].forEach(s=>{
+  rows.push([data[s].title,"",""]);
+  data[s].items.forEach(i=>{
+   if(i.checked[hours]) rows.push(["☐",i.name,qty(i)]);
   });
-
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  saveAs(blob, "plan_safe.csv");
+ });
+ const ws=XLSX.utils.aoa_to_sheet(rows);
+ ws["!cols"]=[{wch:5},{wch:40},{wch:10}];
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,ws,"Чек-лист");
+ XLSX.writeFile(wb,`checklist_${hours}h.xlsx`);
 }
 
-// ===== ВКЛАДКИ =====
-const buttons=document.querySelectorAll(".tabs button"); const sections=document.querySelectorAll("section");
-function goTab(tab,push=true){ sections.forEach(s=>s.classList.remove("active")); buttons.forEach(b=>b.classList.remove("active")); document.getElementById(tab).classList.add("active"); document.querySelector(`[data-tab="${tab}"]`).classList.add("active"); if(push) history.pushState({tab},"","#"+tab); }
-buttons.forEach(b=>b.addEventListener("click",()=>goTab(b.dataset.tab)));
-window.addEventListener("popstate",e=>goTab(e.state?.tab||"home",false));
+function exportPDF(){
+ const {jsPDF}=window.jspdf;
+ const d=new jsPDF();
+ let y=10;
+ ["home","evac","car"].forEach(s=>{
+  d.text(data[s].title,10,y);y+=6;
+  data[s].items.forEach(i=>{
+   if(i.checked[hours]){d.text(`• ${i.name} (${qty(i)})`,12,y);y+=5;}
+  });
+  y+=4;
+ });
+ d.save("plan.pdf");
+}
 
-// ===== СТАРТ =====
-render(); goTab(location.hash.replace("#","")||"home",false);
+document.querySelectorAll(".tabs button").forEach(b=>{
+ b.onclick=()=>{
+  document.querySelectorAll("section").forEach(s=>s.classList.remove("active"));
+  document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
+  document.getElementById(b.dataset.tab).classList.add("active");
+  b.classList.add("active");
+ };
+});
 
-// ===== SW =====
-if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js"); }
-
+render();
+document.querySelector(".tabs button").click();
 </script>
+
 </body>
 </html>
